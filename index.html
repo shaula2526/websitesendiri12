@@ -4,324 +4,193 @@
 <meta charset="UTF-8">
 <title>Smart Student App</title>
 
-<style>
-:root {
-  --primary: #4f46e5;
-  --bg: #f4f6fb;
-  --card: #ffffff;
-  --text: #333;
-}
+<!-- React CDN -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
-body.dark {
-  --bg: #121212;
-  --card: #1e1e1e;
-  --text: #fff;
-}
+<!-- Babel -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.container {
-  max-width: 550px;
-  margin: 30px auto;
-  padding: 20px;
-}
-
-.card {
-  background: var(--card);
-  padding: 20px;
-  border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-}
-
-h1 {
-  text-align: center;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  margin: 5px 0;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-}
-
-button {
-  padding: 10px 15px;
-  border: none;
-  background: var(--primary);
-  color: white;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-.flex {
-  display: flex;
-  gap: 10px;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  background: #eee;
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.done {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
-.hidden {
-  display: none;
-}
-
-.filter button {
-  background: #64748b;
-}
-
-.profile {
-  font-size: 14px;
-}
-
-.qr-preview {
-  width: 100%;
-  margin-top: 10px;
-  border-radius: 10px;
-}
-</style>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
 
 </head>
-<body>
+<body class="bg-gray-100">
 
-<div class="container">
+<div id="root"></div>
 
-<h1>🚀 Smart Student App</h1>
+<script type="text/babel">
 
-<!-- LOGIN -->
-<div id="loginBox" class="card">
-  <input id="usernameInput" placeholder="Nama">
-  <input id="nimInput" placeholder="NIM">
-  <input id="jurusanInput" placeholder="Jurusan">
-  <button onclick="login()">Masuk</button>
-</div>
+const { useState, useEffect } = React;
 
-<!-- APP -->
-<div id="app" class="hidden">
+function App() {
+  const [user, setUser] = useState(null);
+  const [form, setForm] = useState({ username:"", nim:"", jurusan:"" });
+  const [tasks, setTasks] = useState([]);
+  const [input, setInput] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [dark, setDark] = useState(false);
+  const [qrImg, setQrImg] = useState(null);
+  const [qrStatus, setQrStatus] = useState("");
 
-  <!-- PROFILE -->
-  <div class="card profile">
-    👤 <b id="showUser"></b><br>
-    🎓 NIM: <span id="showNim"></span><br>
-    📚 Jurusan: <span id="showJurusan"></span><br><br>
-    <button onclick="toggleDark()">🌙 Dark Mode</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+  // LOAD USER
+  useEffect(() => {
+    const u = JSON.parse(localStorage.getItem("currentUser"));
+    if (u) {
+      setUser(u);
+      loadTasks(u.nim);
+    }
+  }, []);
 
-  <!-- TODO -->
-  <div class="card">
-    <h3>📝 ToDo</h3>
+  const loadTasks = (nim) => {
+    const data = JSON.parse(localStorage.getItem("tasks_" + nim)) || [];
+    setTasks(data);
+  };
 
-    <div class="flex">
-      <input id="taskInput" placeholder="Tambah tugas...">
-      <button onclick="addTask()">+</button>
-    </div>
+  const saveTasks = (newTasks) => {
+    localStorage.setItem("tasks_" + user.nim, JSON.stringify(newTasks));
+    setTasks(newTasks);
+  };
 
-    <div class="filter">
-      <button onclick="setFilter('all')">All</button>
-      <button onclick="setFilter('done')">Done</button>
-      <button onclick="setFilter('pending')">Pending</button>
-    </div>
+  const login = () => {
+    if (!form.username || !form.nim || !form.jurusan) {
+      alert("Lengkapi data!");
+      return;
+    }
+    localStorage.setItem("currentUser", JSON.stringify(form));
+    setUser(form);
+    loadTasks(form.nim);
+  };
 
-    <ul id="taskList"></ul>
-    <p id="aiText"></p>
-  </div>
+  const logout = () => {
+    localStorage.removeItem("currentUser");
+    location.reload();
+  };
 
-  <!-- ABSENSI QR -->
-  <div class="card">
-    <h3>📸 Absensi QR</h3>
-    <input type="file" accept="image/*" onchange="scanQR(event)">
-    <img id="qrPreview" class="qr-preview hidden">
-    <p id="qrResult"></p>
-  </div>
+  // TODO
+  const addTask = () => {
+    if (!input) return;
+    const newTasks = [...tasks, { id: Date.now(), text: input, done:false }];
+    saveTasks(newTasks);
+    setInput("");
+  };
 
-</div>
+  const toggleTask = (id) => {
+    const newTasks = tasks.map(t =>
+      t.id === id ? { ...t, done: !t.done } : t
+    );
+    saveTasks(newTasks);
+  };
 
-</div>
+  const deleteTask = (id) => {
+    saveTasks(tasks.filter(t => t.id !== id));
+  };
 
-<script>
-let currentUser = null;
-let tasks = [];
-let filter = "all";
+  const filtered =
+    filter === "all" ? tasks :
+    filter === "done" ? tasks.filter(t => t.done) :
+    tasks.filter(t => !t.done);
 
-// LOGIN
-function login() {
-  const username = usernameInput.value;
-  const nim = nimInput.value;
-  const jurusan = jurusanInput.value;
-
-  if (!username || !nim || !jurusan) {
-    alert("Lengkapi semua data!");
-    return;
-  }
-
-  currentUser = { username, nim, jurusan };
-  localStorage.setItem("currentUser", JSON.stringify(currentUser));
-
-  loginBox.classList.add("hidden");
-  app.classList.remove("hidden");
-
-  loadUser();
-  loadTasks();
-}
-
-// LOAD USER
-function loadUser() {
-  const user = JSON.parse(localStorage.getItem("currentUser"));
-  if (!user) return;
-
-  currentUser = user;
-
-  showUser.innerText = user.username;
-  showNim.innerText = user.nim;
-  showJurusan.innerText = user.jurusan;
-}
-
-// KEY PER USER
-function getUserKey() {
-  return "tasks_" + currentUser.nim;
-}
-
-// LOAD TASK
-function loadTasks() {
-  tasks = JSON.parse(localStorage.getItem(getUserKey())) || [];
-  render();
-}
-
-// ADD TASK
-function addTask() {
-  if (!taskInput.value) return;
-
-  tasks.push({
-    id: Date.now(),
-    text: taskInput.value,
-    done: false
-  });
-
-  save();
-  taskInput.value = "";
-  render();
-}
-
-// TOGGLE
-function toggleTask(id) {
-  tasks = tasks.map(t =>
-    t.id === id ? { ...t, done: !t.done } : t
-  );
-  save();
-  render();
-}
-
-// DELETE
-function deleteTask(id) {
-  tasks = tasks.filter(t => t.id !== id);
-  save();
-  render();
-}
-
-// FILTER
-function setFilter(f) {
-  filter = f;
-  render();
-}
-
-// RENDER
-function render() {
-  taskList.innerHTML = "";
-
-  let data = tasks;
-  if (filter === "done") data = tasks.filter(t => t.done);
-  if (filter === "pending") data = tasks.filter(t => !t.done);
-
-  data.forEach(t => {
-    taskList.innerHTML += `
-      <li class="${t.done ? 'done':''}">
-        <span onclick="toggleTask(${t.id})">${t.text}</span>
-        <button onclick="deleteTask(${t.id})">❌</button>
-      </li>
-    `;
-  });
-
-  aiReminder();
-}
-
-// SAVE
-function save() {
-  localStorage.setItem(getUserKey(), JSON.stringify(tasks));
-}
-
-// AI REMINDER
-function aiReminder() {
+  // AI
   const pending = tasks.filter(t => !t.done).length;
+  const aiText =
+    pending === 0 ? "🔥 Semua selesai!" :
+    pending <= 2 ? "👍 Hampir selesai!" :
+    "⚠️ Banyak tugas!";
 
-  aiText.innerText =
-    pending === 0 ? "🔥 Semua tugas selesai!"
-    : pending <= 2 ? "👍 Hampir selesai!"
-    : "⚠️ Banyak tugas, ayo kerjakan!";
+  // QR
+  const handleQR = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setQrImg(URL.createObjectURL(file));
+    setTimeout(() => setQrStatus("✅ Absensi berhasil"), 1000);
+  };
+
+  return (
+    <div className={dark ? "bg-gray-900 text-white min-h-screen" : "bg-gray-100 min-h-screen"}>
+      <div className="max-w-xl mx-auto p-5">
+
+        <h1 className="text-3xl font-bold text-center mb-5">
+          🚀 Smart Student App
+        </h1>
+
+        {!user ? (
+          <div className="bg-white p-5 rounded-2xl shadow">
+            <input className="w-full p-2 mb-2 border rounded"
+              placeholder="Nama"
+              onChange={e=>setForm({...form, username:e.target.value})}/>
+            <input className="w-full p-2 mb-2 border rounded"
+              placeholder="NIM"
+              onChange={e=>setForm({...form, nim:e.target.value})}/>
+            <input className="w-full p-2 mb-2 border rounded"
+              placeholder="Jurusan"
+              onChange={e=>setForm({...form, jurusan:e.target.value})}/>
+
+            <button onClick={login}
+              className="w-full bg-indigo-600 text-white p-2 rounded">
+              Login
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* PROFILE */}
+            <div className="bg-white p-4 rounded-2xl shadow mb-4">
+              <p><b>{user.username}</b></p>
+              <p>NIM: {user.nim}</p>
+              <p>Jurusan: {user.jurusan}</p>
+
+              <div className="flex gap-2 mt-2">
+                <button onClick={()=>setDark(!dark)} className="bg-gray-500 px-3 py-1 rounded text-white">🌙</button>
+                <button onClick={logout} className="bg-red-500 px-3 py-1 rounded text-white">Logout</button>
+              </div>
+            </div>
+
+            {/* TODO */}
+            <div className="bg-white p-4 rounded-2xl shadow mb-4">
+              <div className="flex gap-2">
+                <input value={input}
+                  onChange={e=>setInput(e.target.value)}
+                  className="flex-1 p-2 border rounded"
+                  placeholder="Tambah tugas..."/>
+                <button onClick={addTask} className="bg-indigo-600 text-white px-3 rounded">+</button>
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <button onClick={()=>setFilter("all")}>All</button>
+                <button onClick={()=>setFilter("done")}>Done</button>
+                <button onClick={()=>setFilter("pending")}>Pending</button>
+              </div>
+
+              <ul className="mt-3">
+                {filtered.map(t=>(
+                  <li key={t.id} className="flex justify-between bg-gray-200 p-2 rounded mt-2">
+                    <span onClick={()=>toggleTask(t.id)}
+                      className={t.done ? "line-through opacity-60":""}>
+                      {t.text}
+                    </span>
+                    <button onClick={()=>deleteTask(t.id)}>❌</button>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="mt-2">{aiText}</p>
+            </div>
+
+            {/* QR */}
+            <div className="bg-white p-4 rounded-2xl shadow">
+              <input type="file" onChange={handleQR}/>
+              {qrImg && <img src={qrImg} className="mt-2 rounded"/>}
+              <p>{qrStatus}</p>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
-// DARK MODE
-function toggleDark() {
-  document.body.classList.toggle("dark");
-}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
-// LOGOUT
-function logout() {
-  localStorage.removeItem("currentUser");
-  location.reload();
-}
-
-// QR ABSENSI (SIMULASI)
-function scanQR(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  qrPreview.src = URL.createObjectURL(file);
-  qrPreview.classList.remove("hidden");
-
-  setTimeout(() => {
-    qrResult.innerText = "✅ Absensi berhasil (QR terdeteksi)";
-  }, 1000);
-}
-
-// AUTO LOGIN
-window.onload = () => {
-  const user = localStorage.getItem("currentUser");
-
-  if (user) {
-    loginBox.classList.add("hidden");
-    app.classList.remove("hidden");
-
-    loadUser();
-    loadTasks();
-  }
-};
 </script>
 
 </body>
