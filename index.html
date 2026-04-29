@@ -116,9 +116,9 @@ li {
 
 <!-- LOGIN -->
 <div id="loginBox" class="card">
-  <input id="username" placeholder="Nama">
-  <input id="nim" placeholder="NIM">
-  <input id="jurusan" placeholder="Jurusan">
+  <input id="usernameInput" placeholder="Nama">
+  <input id="nimInput" placeholder="NIM">
+  <input id="jurusanInput" placeholder="Jurusan">
   <button onclick="login()">Masuk</button>
 </div>
 
@@ -131,6 +131,7 @@ li {
     🎓 NIM: <span id="showNim"></span><br>
     📚 Jurusan: <span id="showJurusan"></span><br><br>
     <button onclick="toggleDark()">🌙 Dark Mode</button>
+    <button onclick="logout()">Logout</button>
   </div>
 
   <!-- TODO -->
@@ -165,7 +166,8 @@ li {
 </div>
 
 <script>
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let currentUser = null;
+let tasks = [];
 let filter = "all";
 
 // LOGIN
@@ -175,52 +177,81 @@ function login() {
   const jurusan = jurusanInput.value;
 
   if (!username || !nim || !jurusan) {
-    alert("Lengkapi data!");
+    alert("Lengkapi semua data!");
     return;
   }
 
-  localStorage.setItem("user", JSON.stringify({ username, nim, jurusan }));
+  currentUser = { username, nim, jurusan };
+  localStorage.setItem("currentUser", JSON.stringify(currentUser));
 
   loginBox.classList.add("hidden");
   app.classList.remove("hidden");
 
   loadUser();
-  render();
+  loadTasks();
 }
 
 // LOAD USER
 function loadUser() {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("currentUser"));
+  if (!user) return;
+
+  currentUser = user;
+
   showUser.innerText = user.username;
   showNim.innerText = user.nim;
   showJurusan.innerText = user.jurusan;
 }
 
-// TODO
+// KEY PER USER
+function getUserKey() {
+  return "tasks_" + currentUser.nim;
+}
+
+// LOAD TASK
+function loadTasks() {
+  tasks = JSON.parse(localStorage.getItem(getUserKey())) || [];
+  render();
+}
+
+// ADD TASK
 function addTask() {
   if (!taskInput.value) return;
 
-  tasks.push({ id: Date.now(), text: taskInput.value, done: false });
+  tasks.push({
+    id: Date.now(),
+    text: taskInput.value,
+    done: false
+  });
+
   save();
   taskInput.value = "";
   render();
 }
 
+// TOGGLE
 function toggleTask(id) {
-  tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
-  save(); render();
+  tasks = tasks.map(t =>
+    t.id === id ? { ...t, done: !t.done } : t
+  );
+  save();
+  render();
 }
 
+// DELETE
 function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
-  save(); render();
+  save();
+  render();
 }
 
+// FILTER
 function setFilter(f) {
   filter = f;
   render();
 }
 
+// RENDER
 function render() {
   taskList.innerHTML = "";
 
@@ -240,17 +271,19 @@ function render() {
   aiReminder();
 }
 
+// SAVE
 function save() {
-  localStorage.setItem("tasks", JSON.stringify(tasks));
+  localStorage.setItem(getUserKey(), JSON.stringify(tasks));
 }
 
 // AI REMINDER
 function aiReminder() {
   const pending = tasks.filter(t => !t.done).length;
+
   aiText.innerText =
-    pending === 0 ? "🔥 Semua selesai!"
+    pending === 0 ? "🔥 Semua tugas selesai!"
     : pending <= 2 ? "👍 Hampir selesai!"
-    : "⚠️ Banyak tugas!";
+    : "⚠️ Banyak tugas, ayo kerjakan!";
 }
 
 // DARK MODE
@@ -258,16 +291,20 @@ function toggleDark() {
   document.body.classList.toggle("dark");
 }
 
+// LOGOUT
+function logout() {
+  localStorage.removeItem("currentUser");
+  location.reload();
+}
+
 // QR ABSENSI (SIMULASI)
 function scanQR(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const img = document.getElementById("qrPreview");
-  img.src = URL.createObjectURL(file);
-  img.classList.remove("hidden");
+  qrPreview.src = URL.createObjectURL(file);
+  qrPreview.classList.remove("hidden");
 
-  // SIMULASI AI SCAN
   setTimeout(() => {
     qrResult.innerText = "✅ Absensi berhasil (QR terdeteksi)";
   }, 1000);
@@ -275,12 +312,14 @@ function scanQR(event) {
 
 // AUTO LOGIN
 window.onload = () => {
-  const user = localStorage.getItem("user");
+  const user = localStorage.getItem("currentUser");
+
   if (user) {
     loginBox.classList.add("hidden");
     app.classList.remove("hidden");
+
     loadUser();
-    render();
+    loadTasks();
   }
 };
 </script>
