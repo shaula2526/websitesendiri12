@@ -2,22 +2,41 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>ToDo App Shaula</title>
+<title>Smart Student App</title>
 
 <style>
+:root {
+  --primary: #4f46e5;
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --text: #333;
+}
+
+body.dark {
+  --bg: #121212;
+  --card: #1e1e1e;
+  --text: #fff;
+}
+
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f4f6f9;
   margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .container {
-  max-width: 500px;
-  margin: 50px auto;
-  background: white;
-  padding: 25px;
-  border-radius: 15px;
+  max-width: 550px;
+  margin: 30px auto;
+  padding: 20px;
+}
+
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 20px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
 }
 
 h1 {
@@ -25,22 +44,29 @@ h1 {
 }
 
 input {
-  padding: 10px;
-  margin: 5px;
-  width: 70%;
+  width: 100%;
+  padding: 12px;
+  margin: 5px 0;
+  border-radius: 10px;
+  border: 1px solid #ccc;
 }
 
 button {
-  padding: 10px;
+  padding: 10px 15px;
   border: none;
-  background: #4CAF50;
+  background: var(--primary);
   color: white;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
 }
 
 button:hover {
-  background: #45a049;
+  opacity: 0.9;
+}
+
+.flex {
+  display: flex;
+  gap: 10px;
 }
 
 ul {
@@ -50,40 +76,33 @@ ul {
 
 li {
   background: #eee;
-  margin: 10px 0;
   padding: 10px;
-  border-radius: 8px;
+  margin: 8px 0;
+  border-radius: 10px;
   display: flex;
   justify-content: space-between;
 }
 
 .done {
   text-decoration: line-through;
-  color: gray;
+  opacity: 0.6;
 }
 
 .hidden {
   display: none;
 }
 
-.top {
-  display: flex;
-  justify-content: space-between;
-}
-
 .filter button {
-  margin: 5px;
-  background: #2196F3;
-}
-
-.filter button:hover {
-  background: #1976D2;
+  background: #64748b;
 }
 
 .profile {
-  background: #fafafa;
-  padding: 10px;
-  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.qr-preview {
+  width: 100%;
+  margin-top: 10px;
   border-radius: 10px;
 }
 </style>
@@ -93,39 +112,53 @@ li {
 
 <div class="container">
 
-<h1>📝 ToDo App</h1>
+<h1>🚀 Smart Student App</h1>
 
 <!-- LOGIN -->
-<div id="loginBox">
-  <input type="text" id="username" placeholder="Nama"><br>
-  <input type="text" id="nim" placeholder="NIM"><br>
-  <input type="text" id="jurusan" placeholder="Jurusan"><br>
-  <button onclick="login()">Login</button>
+<div id="loginBox" class="card">
+  <input id="username" placeholder="Nama">
+  <input id="nim" placeholder="NIM">
+  <input id="jurusan" placeholder="Jurusan">
+  <button onclick="login()">Masuk</button>
 </div>
 
 <!-- APP -->
 <div id="app" class="hidden">
 
-  <div class="profile">
-    👤 <span id="showUser"></span><br>
+  <!-- PROFILE -->
+  <div class="card profile">
+    👤 <b id="showUser"></b><br>
     🎓 NIM: <span id="showNim"></span><br>
-    📚 Jurusan: <span id="showJurusan"></span>
+    📚 Jurusan: <span id="showJurusan"></span><br><br>
+    <button onclick="toggleDark()">🌙 Dark Mode</button>
   </div>
 
-  <div class="top">
-    <input id="taskInput" placeholder="Tambah tugas...">
-    <button onclick="addTask()">Tambah</button>
+  <!-- TODO -->
+  <div class="card">
+    <h3>📝 ToDo</h3>
+
+    <div class="flex">
+      <input id="taskInput" placeholder="Tambah tugas...">
+      <button onclick="addTask()">+</button>
+    </div>
+
+    <div class="filter">
+      <button onclick="setFilter('all')">All</button>
+      <button onclick="setFilter('done')">Done</button>
+      <button onclick="setFilter('pending')">Pending</button>
+    </div>
+
+    <ul id="taskList"></ul>
+    <p id="aiText"></p>
   </div>
 
-  <div class="filter">
-    <button onclick="setFilter('all')">All</button>
-    <button onclick="setFilter('done')">Done</button>
-    <button onclick="setFilter('pending')">Pending</button>
+  <!-- ABSENSI QR -->
+  <div class="card">
+    <h3>📸 Absensi QR</h3>
+    <input type="file" accept="image/*" onchange="scanQR(event)">
+    <img id="qrPreview" class="qr-preview hidden">
+    <p id="qrResult"></p>
   </div>
-
-  <ul id="taskList"></ul>
-
-  <p id="aiText"></p>
 
 </div>
 
@@ -137,19 +170,19 @@ let filter = "all";
 
 // LOGIN
 function login() {
-  const username = document.getElementById("username").value;
-  const nim = document.getElementById("nim").value;
-  const jurusan = document.getElementById("jurusan").value;
+  const username = usernameInput.value;
+  const nim = nimInput.value;
+  const jurusan = jurusanInput.value;
 
   if (!username || !nim || !jurusan) {
-    alert("Isi semua data!");
+    alert("Lengkapi data!");
     return;
   }
 
   localStorage.setItem("user", JSON.stringify({ username, nim, jurusan }));
 
-  document.getElementById("loginBox").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
+  loginBox.classList.add("hidden");
+  app.classList.remove("hidden");
 
   loadUser();
   render();
@@ -158,63 +191,46 @@ function login() {
 // LOAD USER
 function loadUser() {
   const user = JSON.parse(localStorage.getItem("user"));
-  if (!user) return;
-
-  document.getElementById("showUser").innerText = user.username;
-  document.getElementById("showNim").innerText = user.nim;
-  document.getElementById("showJurusan").innerText = user.jurusan;
+  showUser.innerText = user.username;
+  showNim.innerText = user.nim;
+  showJurusan.innerText = user.jurusan;
 }
 
-// ADD TASK
+// TODO
 function addTask() {
-  const input = document.getElementById("taskInput");
-  if (input.value.trim() === "") return;
+  if (!taskInput.value) return;
 
-  tasks.push({
-    id: Date.now(),
-    text: input.value,
-    done: false
-  });
-
+  tasks.push({ id: Date.now(), text: taskInput.value, done: false });
   save();
-  input.value = "";
+  taskInput.value = "";
   render();
 }
 
-// TOGGLE
 function toggleTask(id) {
-  tasks = tasks.map(t =>
-    t.id === id ? { ...t, done: !t.done } : t
-  );
-  save();
-  render();
+  tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+  save(); render();
 }
 
-// DELETE
 function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
-  save();
-  render();
+  save(); render();
 }
 
-// FILTER
 function setFilter(f) {
   filter = f;
   render();
 }
 
-// RENDER
 function render() {
-  const list = document.getElementById("taskList");
-  list.innerHTML = "";
+  taskList.innerHTML = "";
 
-  let filtered = tasks;
-  if (filter === "done") filtered = tasks.filter(t => t.done);
-  if (filter === "pending") filtered = tasks.filter(t => !t.done);
+  let data = tasks;
+  if (filter === "done") data = tasks.filter(t => t.done);
+  if (filter === "pending") data = tasks.filter(t => !t.done);
 
-  filtered.forEach(t => {
-    list.innerHTML += `
-      <li class="${t.done ? 'done' : ''}">
+  data.forEach(t => {
+    taskList.innerHTML += `
+      <li class="${t.done ? 'done':''}">
         <span onclick="toggleTask(${t.id})">${t.text}</span>
         <button onclick="deleteTask(${t.id})">❌</button>
       </li>
@@ -224,29 +240,45 @@ function render() {
   aiReminder();
 }
 
-// SAVE
 function save() {
   localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
-// 🤖 AI REMINDER (simple)
+// AI REMINDER
 function aiReminder() {
   const pending = tasks.filter(t => !t.done).length;
-  let msg = "";
-
-  if (pending === 0) msg = "🔥 Semua tugas selesai!";
-  else if (pending <= 2) msg = "👍 Sedikit lagi, lanjut!";
-  else msg = "⚠️ Banyak tugas! Jangan ditunda 😅";
-
-  document.getElementById("aiText").innerText = msg;
+  aiText.innerText =
+    pending === 0 ? "🔥 Semua selesai!"
+    : pending <= 2 ? "👍 Hampir selesai!"
+    : "⚠️ Banyak tugas!";
 }
 
-// AUTO LOGIN kalau sudah ada data
+// DARK MODE
+function toggleDark() {
+  document.body.classList.toggle("dark");
+}
+
+// QR ABSENSI (SIMULASI)
+function scanQR(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const img = document.getElementById("qrPreview");
+  img.src = URL.createObjectURL(file);
+  img.classList.remove("hidden");
+
+  // SIMULASI AI SCAN
+  setTimeout(() => {
+    qrResult.innerText = "✅ Absensi berhasil (QR terdeteksi)";
+  }, 1000);
+}
+
+// AUTO LOGIN
 window.onload = () => {
   const user = localStorage.getItem("user");
   if (user) {
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
+    loginBox.classList.add("hidden");
+    app.classList.remove("hidden");
     loadUser();
     render();
   }
