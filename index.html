@@ -1,31 +1,257 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>To-Do App</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>ToDo App Shaula</title>
+
+<style>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f4f6f9;
+  margin: 0;
+}
+
+.container {
+  max-width: 500px;
+  margin: 50px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+h1 {
+  text-align: center;
+}
+
+input {
+  padding: 10px;
+  margin: 5px;
+  width: 70%;
+}
+
+button {
+  padding: 10px;
+  border: none;
+  background: #4CAF50;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #45a049;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  background: #eee;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.done {
+  text-decoration: line-through;
+  color: gray;
+}
+
+.hidden {
+  display: none;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.filter button {
+  margin: 5px;
+  background: #2196F3;
+}
+
+.filter button:hover {
+  background: #1976D2;
+}
+
+.profile {
+  background: #fafafa;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+}
+</style>
+
 </head>
 <body>
 
 <div class="container">
-  <h1>📝 To-Do List</h1>
 
-  <div id="loginBox">
-    <input type="text" id="username" placeholder="Masukkan username">
-    <button onclick="login()">Login</button>
-  </div>
+<h1>📝 ToDo App</h1>
 
-  <div id="app" class="hidden">
-    <div class="top-bar">
-      <input type="text" id="taskInput" placeholder="Tambah tugas...">
-      <button onclick="addTask()">Tambah</button>
-      <button onclick="toggleDarkMode()">🌙</button>
-    </div>
-
-    <ul id="taskList"></ul>
-  </div>
+<!-- LOGIN -->
+<div id="loginBox">
+  <input type="text" id="username" placeholder="Nama"><br>
+  <input type="text" id="nim" placeholder="NIM"><br>
+  <input type="text" id="jurusan" placeholder="Jurusan"><br>
+  <button onclick="login()">Login</button>
 </div>
 
-<script src="script.js"></script>
+<!-- APP -->
+<div id="app" class="hidden">
+
+  <div class="profile">
+    👤 <span id="showUser"></span><br>
+    🎓 NIM: <span id="showNim"></span><br>
+    📚 Jurusan: <span id="showJurusan"></span>
+  </div>
+
+  <div class="top">
+    <input id="taskInput" placeholder="Tambah tugas...">
+    <button onclick="addTask()">Tambah</button>
+  </div>
+
+  <div class="filter">
+    <button onclick="setFilter('all')">All</button>
+    <button onclick="setFilter('done')">Done</button>
+    <button onclick="setFilter('pending')">Pending</button>
+  </div>
+
+  <ul id="taskList"></ul>
+
+  <p id="aiText"></p>
+
+</div>
+
+</div>
+
+<script>
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let filter = "all";
+
+// LOGIN
+function login() {
+  const username = document.getElementById("username").value;
+  const nim = document.getElementById("nim").value;
+  const jurusan = document.getElementById("jurusan").value;
+
+  if (!username || !nim || !jurusan) {
+    alert("Isi semua data!");
+    return;
+  }
+
+  localStorage.setItem("user", JSON.stringify({ username, nim, jurusan }));
+
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+
+  loadUser();
+  render();
+}
+
+// LOAD USER
+function loadUser() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!user) return;
+
+  document.getElementById("showUser").innerText = user.username;
+  document.getElementById("showNim").innerText = user.nim;
+  document.getElementById("showJurusan").innerText = user.jurusan;
+}
+
+// ADD TASK
+function addTask() {
+  const input = document.getElementById("taskInput");
+  if (input.value.trim() === "") return;
+
+  tasks.push({
+    id: Date.now(),
+    text: input.value,
+    done: false
+  });
+
+  save();
+  input.value = "";
+  render();
+}
+
+// TOGGLE
+function toggleTask(id) {
+  tasks = tasks.map(t =>
+    t.id === id ? { ...t, done: !t.done } : t
+  );
+  save();
+  render();
+}
+
+// DELETE
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  save();
+  render();
+}
+
+// FILTER
+function setFilter(f) {
+  filter = f;
+  render();
+}
+
+// RENDER
+function render() {
+  const list = document.getElementById("taskList");
+  list.innerHTML = "";
+
+  let filtered = tasks;
+  if (filter === "done") filtered = tasks.filter(t => t.done);
+  if (filter === "pending") filtered = tasks.filter(t => !t.done);
+
+  filtered.forEach(t => {
+    list.innerHTML += `
+      <li class="${t.done ? 'done' : ''}">
+        <span onclick="toggleTask(${t.id})">${t.text}</span>
+        <button onclick="deleteTask(${t.id})">❌</button>
+      </li>
+    `;
+  });
+
+  aiReminder();
+}
+
+// SAVE
+function save() {
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+// 🤖 AI REMINDER (simple)
+function aiReminder() {
+  const pending = tasks.filter(t => !t.done).length;
+  let msg = "";
+
+  if (pending === 0) msg = "🔥 Semua tugas selesai!";
+  else if (pending <= 2) msg = "👍 Sedikit lagi, lanjut!";
+  else msg = "⚠️ Banyak tugas! Jangan ditunda 😅";
+
+  document.getElementById("aiText").innerText = msg;
+}
+
+// AUTO LOGIN kalau sudah ada data
+window.onload = () => {
+  const user = localStorage.getItem("user");
+  if (user) {
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    loadUser();
+    render();
+  }
+};
+</script>
+
 </body>
 </html>
