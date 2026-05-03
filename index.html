@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aplikasi Perpustakaan</title>
+<title>Aplikasi Perpustakaan Premium</title>
 
 <style>
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', sans-serif;
     background: linear-gradient(135deg, #1e3c72, #2a5298);
     color: #fff;
     margin: 0;
@@ -15,12 +15,12 @@ body {
 }
 
 .container {
-    max-width: 900px;
+    max-width: 1000px;
     margin: auto;
     background: #ffffff10;
     padding: 20px;
     border-radius: 15px;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
 }
 
 h1 {
@@ -46,9 +46,13 @@ button:hover {
     background: #0072ff;
 }
 
+.search {
+    margin-top: 20px;
+}
+
 table {
     width: 100%;
-    margin-top: 20px;
+    margin-top: 15px;
     border-collapse: collapse;
 }
 
@@ -77,11 +81,12 @@ tr:nth-child(even) {
 <body>
 
 <div class="container">
-<h1>📚 Aplikasi Perpustakaan</h1>
+<h1>📚 Aplikasi Perpustakaan Premium</h1>
 
 <input type="text" id="nama" placeholder="Nama">
 <input type="text" id="nim" placeholder="NIM">
 <input type="text" id="jurusan" placeholder="Jurusan">
+<input type="text" id="buku" placeholder="Nama Buku">
 
 <select id="status">
     <option value="Pinjam">Pinjam Buku</option>
@@ -91,12 +96,15 @@ tr:nth-child(even) {
 
 <button onclick="tambahData()">Tambah Data</button>
 
+<input type="text" id="search" class="search" placeholder="🔍 Cari nama / NIM / buku..." onkeyup="render()">
+
 <table>
 <thead>
 <tr>
 <th>Nama</th>
 <th>NIM</th>
 <th>Jurusan</th>
+<th>Nama Buku</th>
 <th>Status</th>
 <th>Denda</th>
 <th>Aksi</th>
@@ -115,10 +123,19 @@ let data = JSON.parse(localStorage.getItem("perpus")) || [];
 
 function render() {
     let tabel = document.getElementById("tabelData");
+    let keyword = document.getElementById("search").value.toLowerCase();
+
     tabel.innerHTML = "";
     let total = 0;
 
-    data.forEach((item, index) => {
+    data
+    .filter(item =>
+        item.nama.toLowerCase().includes(keyword) ||
+        item.nim.toLowerCase().includes(keyword) ||
+        item.buku.toLowerCase().includes(keyword)
+    )
+    .forEach((item, index) => {
+
         total += item.denda;
 
         tabel.innerHTML += `
@@ -126,6 +143,7 @@ function render() {
             <td>${item.nama}</td>
             <td>${item.nim}</td>
             <td>${item.jurusan}</td>
+            <td>${item.buku}</td>
             <td>${item.status}</td>
             <td>Rp ${item.denda}</td>
             <td><button onclick="hapus(${index})">Hapus</button></td>
@@ -141,24 +159,26 @@ function tambahData() {
     let nama = document.getElementById("nama").value;
     let nim = document.getElementById("nim").value;
     let jurusan = document.getElementById("jurusan").value;
+    let buku = document.getElementById("buku").value;
     let status = document.getElementById("status").value;
 
     let denda = 0;
 
     if (status === "Hilang") {
-        denda = 50000; // denda tetap
+        denda = 50000;
     }
 
-    if (!nama || !nim || !jurusan) {
+    if (!nama || !nim || !jurusan || !buku) {
         alert("Isi semua data!");
         return;
     }
 
-    data.push({ nama, nim, jurusan, status, denda });
+    data.push({ nama, nim, jurusan, buku, status, denda });
 
     document.getElementById("nama").value = "";
     document.getElementById("nim").value = "";
     document.getElementById("jurusan").value = "";
+    document.getElementById("buku").value = "";
 
     render();
 }
