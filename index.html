@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aplikasi Perpustakaan Premium</title>
+<title>Perpustakaan Super Premium</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
@@ -15,7 +17,7 @@ body {
 }
 
 .container {
-    max-width: 1000px;
+    max-width: 1100px;
     margin: auto;
     background: #ffffff10;
     padding: 20px;
@@ -46,10 +48,6 @@ button:hover {
     background: #0072ff;
 }
 
-.search {
-    margin-top: 20px;
-}
-
 table {
     width: 100%;
     margin-top: 15px;
@@ -71,17 +69,35 @@ tr:nth-child(even) {
 
 .total {
     margin-top: 15px;
-    font-size: 18px;
-    font-weight: bold;
     text-align: right;
+    font-weight: bold;
+}
+
+/* login */
+.login {
+    max-width: 400px;
+    margin: auto;
+    margin-top: 100px;
+    background: #ffffff10;
+    padding: 20px;
+    border-radius: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-<h1>📚 Aplikasi Perpustakaan Premium</h1>
+<!-- LOGIN -->
+<div id="loginPage" class="login">
+<h2>🔐 Login Admin</h2>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- APP -->
+<div id="app" class="container" style="display:none;">
+<h1>📚 Sistem Perpustakaan</h1>
 
 <input type="text" id="nama" placeholder="Nama">
 <input type="text" id="nim" placeholder="NIM">
@@ -89,14 +105,14 @@ tr:nth-child(even) {
 <input type="text" id="buku" placeholder="Nama Buku">
 
 <select id="status">
-    <option value="Pinjam">Pinjam Buku</option>
-    <option value="Kembali">Pengembalian Buku</option>
-    <option value="Hilang">Buku Hilang</option>
+<option value="Pinjam">Pinjam</option>
+<option value="Kembali">Kembali</option>
+<option value="Hilang">Hilang</option>
 </select>
 
-<button onclick="tambahData()">Tambah Data</button>
+<button onclick="tambahData()">Tambah / Update</button>
 
-<input type="text" id="search" class="search" placeholder="🔍 Cari nama / NIM / buku..." onkeyup="render()">
+<input type="text" id="search" placeholder="🔍 Cari..." onkeyup="render()">
 
 <table>
 <thead>
@@ -104,57 +120,39 @@ tr:nth-child(even) {
 <th>Nama</th>
 <th>NIM</th>
 <th>Jurusan</th>
-<th>Nama Buku</th>
+<th>Buku</th>
 <th>Status</th>
 <th>Denda</th>
 <th>Aksi</th>
 </tr>
 </thead>
-
 <tbody id="tabelData"></tbody>
 </table>
 
 <div class="total">Total Denda: Rp <span id="totalDenda">0</span></div>
 
+<canvas id="chart" height="100"></canvas>
+
 </div>
 
 <script>
 let data = JSON.parse(localStorage.getItem("perpus")) || [];
+let editIndex = null;
 
-function render() {
-    let tabel = document.getElementById("tabelData");
-    let keyword = document.getElementById("search").value.toLowerCase();
+/* LOGIN */
+function login() {
+    let user = document.getElementById("username").value;
+    let pass = document.getElementById("password").value;
 
-    tabel.innerHTML = "";
-    let total = 0;
-
-    data
-    .filter(item =>
-        item.nama.toLowerCase().includes(keyword) ||
-        item.nim.toLowerCase().includes(keyword) ||
-        item.buku.toLowerCase().includes(keyword)
-    )
-    .forEach((item, index) => {
-
-        total += item.denda;
-
-        tabel.innerHTML += `
-        <tr>
-            <td>${item.nama}</td>
-            <td>${item.nim}</td>
-            <td>${item.jurusan}</td>
-            <td>${item.buku}</td>
-            <td>${item.status}</td>
-            <td>Rp ${item.denda}</td>
-            <td><button onclick="hapus(${index})">Hapus</button></td>
-        </tr>
-        `;
-    });
-
-    document.getElementById("totalDenda").innerText = total;
-    localStorage.setItem("perpus", JSON.stringify(data));
+    if (user === "admin" && pass === "123") {
+        document.getElementById("loginPage").style.display = "none";
+        document.getElementById("app").style.display = "block";
+    } else {
+        alert("Login gagal!");
+    }
 }
 
+/* TAMBAH / EDIT */
 function tambahData() {
     let nama = document.getElementById("nama").value;
     let nim = document.getElementById("nim").value;
@@ -162,30 +160,110 @@ function tambahData() {
     let buku = document.getElementById("buku").value;
     let status = document.getElementById("status").value;
 
-    let denda = 0;
-
-    if (status === "Hilang") {
-        denda = 50000;
-    }
+    let denda = status === "Hilang" ? 50000 : 0;
 
     if (!nama || !nim || !jurusan || !buku) {
         alert("Isi semua data!");
         return;
     }
 
-    data.push({ nama, nim, jurusan, buku, status, denda });
+    let obj = { nama, nim, jurusan, buku, status, denda };
 
+    if (editIndex !== null) {
+        data[editIndex] = obj;
+        editIndex = null;
+    } else {
+        data.push(obj);
+    }
+
+    clearForm();
+    render();
+}
+
+function edit(i) {
+    let item = data[i];
+    document.getElementById("nama").value = item.nama;
+    document.getElementById("nim").value = item.nim;
+    document.getElementById("jurusan").value = item.jurusan;
+    document.getElementById("buku").value = item.buku;
+    document.getElementById("status").value = item.status;
+
+    editIndex = i;
+}
+
+function hapus(i) {
+    data.splice(i, 1);
+    render();
+}
+
+function clearForm() {
     document.getElementById("nama").value = "";
     document.getElementById("nim").value = "";
     document.getElementById("jurusan").value = "";
     document.getElementById("buku").value = "";
-
-    render();
 }
 
-function hapus(index) {
-    data.splice(index, 1);
-    render();
+/* RENDER */
+function render() {
+    let tabel = document.getElementById("tabelData");
+    let keyword = document.getElementById("search").value.toLowerCase();
+
+    tabel.innerHTML = "";
+    let total = 0;
+
+    let filtered = data.filter(item =>
+        item.nama.toLowerCase().includes(keyword) ||
+        item.nim.toLowerCase().includes(keyword) ||
+        item.buku.toLowerCase().includes(keyword)
+    );
+
+    filtered.forEach((item, i) => {
+        total += item.denda;
+
+        tabel.innerHTML += `
+        <tr>
+        <td>${item.nama}</td>
+        <td>${item.nim}</td>
+        <td>${item.jurusan}</td>
+        <td>${item.buku}</td>
+        <td>${item.status}</td>
+        <td>Rp ${item.denda}</td>
+        <td>
+            <button onclick="edit(${i})">Edit</button>
+            <button onclick="hapus(${i})">Hapus</button>
+        </td>
+        </tr>`;
+    });
+
+    document.getElementById("totalDenda").innerText = total;
+
+    localStorage.setItem("perpus", JSON.stringify(data));
+
+    updateChart();
+}
+
+/* CHART */
+let chart;
+
+function updateChart() {
+    let pinjam = data.filter(d => d.status === "Pinjam").length;
+    let kembali = data.filter(d => d.status === "Kembali").length;
+    let hilang = data.filter(d => d.status === "Hilang").length;
+
+    let ctx = document.getElementById("chart").getContext("2d");
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Pinjam', 'Kembali', 'Hilang'],
+            datasets: [{
+                label: 'Statistik Buku',
+                data: [pinjam, kembali, hilang]
+            }]
+        }
+    });
 }
 
 render();
