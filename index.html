@@ -2,195 +2,173 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Smart Student App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aplikasi Perpustakaan</title>
 
-<!-- React CDN -->
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-
-<!-- Babel -->
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!-- Tailwind -->
-<script src="https://cdn.tailwindcss.com"></script>
-
-</head>
-<body class="bg-gray-100">
-
-<div id="root"></div>
-
-<script type="text/babel">
-
-const { useState, useEffect } = React;
-
-function App() {
-  const [user, setUser] = useState(null);
-  const [form, setForm] = useState({ username:"", nim:"", jurusan:"" });
-  const [tasks, setTasks] = useState([]);
-  const [input, setInput] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [dark, setDark] = useState(false);
-  const [qrImg, setQrImg] = useState(null);
-  const [qrStatus, setQrStatus] = useState("");
-
-  // LOAD USER
-  useEffect(() => {
-    const u = JSON.parse(localStorage.getItem("currentUser"));
-    if (u) {
-      setUser(u);
-      loadTasks(u.nim);
-    }
-  }, []);
-
-  const loadTasks = (nim) => {
-    const data = JSON.parse(localStorage.getItem("tasks_" + nim)) || [];
-    setTasks(data);
-  };
-
-  const saveTasks = (newTasks) => {
-    localStorage.setItem("tasks_" + user.nim, JSON.stringify(newTasks));
-    setTasks(newTasks);
-  };
-
-  const login = () => {
-    if (!form.username || !form.nim || !form.jurusan) {
-      alert("Lengkapi data!");
-      return;
-    }
-    localStorage.setItem("currentUser", JSON.stringify(form));
-    setUser(form);
-    loadTasks(form.nim);
-  };
-
-  const logout = () => {
-    localStorage.removeItem("currentUser");
-    location.reload();
-  };
-
-  // TODO
-  const addTask = () => {
-    if (!input) return;
-    const newTasks = [...tasks, { id: Date.now(), text: input, done:false }];
-    saveTasks(newTasks);
-    setInput("");
-  };
-
-  const toggleTask = (id) => {
-    const newTasks = tasks.map(t =>
-      t.id === id ? { ...t, done: !t.done } : t
-    );
-    saveTasks(newTasks);
-  };
-
-  const deleteTask = (id) => {
-    saveTasks(tasks.filter(t => t.id !== id));
-  };
-
-  const filtered =
-    filter === "all" ? tasks :
-    filter === "done" ? tasks.filter(t => t.done) :
-    tasks.filter(t => !t.done);
-
-  // AI
-  const pending = tasks.filter(t => !t.done).length;
-  const aiText =
-    pending === 0 ? "🔥 Semua selesai!" :
-    pending <= 2 ? "👍 Hampir selesai!" :
-    "⚠️ Banyak tugas!";
-
-  // QR
-  const handleQR = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setQrImg(URL.createObjectURL(file));
-    setTimeout(() => setQrStatus("✅ Absensi berhasil"), 1000);
-  };
-
-  return (
-    <div className={dark ? "bg-gray-900 text-white min-h-screen" : "bg-gray-100 min-h-screen"}>
-      <div className="max-w-xl mx-auto p-5">
-
-        <h1 className="text-3xl font-bold text-center mb-5">
-          🚀 Smart Student App
-        </h1>
-
-        {!user ? (
-          <div className="bg-white p-5 rounded-2xl shadow">
-            <input className="w-full p-2 mb-2 border rounded"
-              placeholder="Nama"
-              onChange={e=>setForm({...form, username:e.target.value})}/>
-            <input className="w-full p-2 mb-2 border rounded"
-              placeholder="NIM"
-              onChange={e=>setForm({...form, nim:e.target.value})}/>
-            <input className="w-full p-2 mb-2 border rounded"
-              placeholder="Jurusan"
-              onChange={e=>setForm({...form, jurusan:e.target.value})}/>
-
-            <button onClick={login}
-              className="w-full bg-indigo-600 text-white p-2 rounded">
-              Login
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* PROFILE */}
-            <div className="bg-white p-4 rounded-2xl shadow mb-4">
-              <p><b>{user.username}</b></p>
-              <p>NIM: {user.nim}</p>
-              <p>Jurusan: {user.jurusan}</p>
-
-              <div className="flex gap-2 mt-2">
-                <button onClick={()=>setDark(!dark)} className="bg-gray-500 px-3 py-1 rounded text-white">🌙</button>
-                <button onClick={logout} className="bg-red-500 px-3 py-1 rounded text-white">Logout</button>
-              </div>
-            </div>
-
-            {/* TODO */}
-            <div className="bg-white p-4 rounded-2xl shadow mb-4">
-              <div className="flex gap-2">
-                <input value={input}
-                  onChange={e=>setInput(e.target.value)}
-                  className="flex-1 p-2 border rounded"
-                  placeholder="Tambah tugas..."/>
-                <button onClick={addTask} className="bg-indigo-600 text-white px-3 rounded">+</button>
-              </div>
-
-              <div className="flex gap-2 mt-2">
-                <button onClick={()=>setFilter("all")}>All</button>
-                <button onClick={()=>setFilter("done")}>Done</button>
-                <button onClick={()=>setFilter("pending")}>Pending</button>
-              </div>
-
-              <ul className="mt-3">
-                {filtered.map(t=>(
-                  <li key={t.id} className="flex justify-between bg-gray-200 p-2 rounded mt-2">
-                    <span onClick={()=>toggleTask(t.id)}
-                      className={t.done ? "line-through opacity-60":""}>
-                      {t.text}
-                    </span>
-                    <button onClick={()=>deleteTask(t.id)}>❌</button>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="mt-2">{aiText}</p>
-            </div>
-
-            {/* QR */}
-            <div className="bg-white p-4 rounded-2xl shadow">
-              <input type="file" onChange={handleQR}/>
-              {qrImg && <img src={qrImg} className="mt-2 rounded"/>}
-              <p>{qrStatus}</p>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: #fff;
+    margin: 0;
+    padding: 20px;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+.container {
+    max-width: 900px;
+    margin: auto;
+    background: #ffffff10;
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
 
+h1 {
+    text-align: center;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #00c6ff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0072ff;
+}
+
+table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+}
+
+th {
+    background: #0072ff;
+}
+
+tr:nth-child(even) {
+    background: #ffffff20;
+}
+
+.total {
+    margin-top: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: right;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h1>📚 Aplikasi Perpustakaan</h1>
+
+<input type="text" id="nama" placeholder="Nama">
+<input type="text" id="nim" placeholder="NIM">
+<input type="text" id="jurusan" placeholder="Jurusan">
+
+<select id="status">
+    <option value="Pinjam">Pinjam Buku</option>
+    <option value="Kembali">Pengembalian Buku</option>
+    <option value="Hilang">Buku Hilang</option>
+</select>
+
+<button onclick="tambahData()">Tambah Data</button>
+
+<table>
+<thead>
+<tr>
+<th>Nama</th>
+<th>NIM</th>
+<th>Jurusan</th>
+<th>Status</th>
+<th>Denda</th>
+<th>Aksi</th>
+</tr>
+</thead>
+
+<tbody id="tabelData"></tbody>
+</table>
+
+<div class="total">Total Denda: Rp <span id="totalDenda">0</span></div>
+
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem("perpus")) || [];
+
+function render() {
+    let tabel = document.getElementById("tabelData");
+    tabel.innerHTML = "";
+    let total = 0;
+
+    data.forEach((item, index) => {
+        total += item.denda;
+
+        tabel.innerHTML += `
+        <tr>
+            <td>${item.nama}</td>
+            <td>${item.nim}</td>
+            <td>${item.jurusan}</td>
+            <td>${item.status}</td>
+            <td>Rp ${item.denda}</td>
+            <td><button onclick="hapus(${index})">Hapus</button></td>
+        </tr>
+        `;
+    });
+
+    document.getElementById("totalDenda").innerText = total;
+    localStorage.setItem("perpus", JSON.stringify(data));
+}
+
+function tambahData() {
+    let nama = document.getElementById("nama").value;
+    let nim = document.getElementById("nim").value;
+    let jurusan = document.getElementById("jurusan").value;
+    let status = document.getElementById("status").value;
+
+    let denda = 0;
+
+    if (status === "Hilang") {
+        denda = 50000; // denda tetap
+    }
+
+    if (!nama || !nim || !jurusan) {
+        alert("Isi semua data!");
+        return;
+    }
+
+    data.push({ nama, nim, jurusan, status, denda });
+
+    document.getElementById("nama").value = "";
+    document.getElementById("nim").value = "";
+    document.getElementById("jurusan").value = "";
+
+    render();
+}
+
+function hapus(index) {
+    data.splice(index, 1);
+    render();
+}
+
+render();
 </script>
 
 </body>
